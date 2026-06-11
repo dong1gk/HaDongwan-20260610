@@ -13,11 +13,16 @@ async function request(path, options = {}) {
   return res.json();
 }
 
-export function fetchRecommendation(answers) {
+export function fetchRecommendation(answers, chatTranscript = null) {
   return request("/api/recommend", {
     method: "POST",
-    body: JSON.stringify(answers),
+    body: JSON.stringify({ ...answers, chatTranscript }),
   });
+}
+
+// Render 무료 플랜 슬립 해제용 — 랜딩 진입 시 미리 서버를 깨워둔다
+export function pingHealth() {
+  return fetch(`${API_BASE}/api/health`).catch(() => {});
 }
 
 export function sendChatMessage(messages) {

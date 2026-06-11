@@ -56,6 +56,17 @@ export default function RecommendationResults({ topProducts }) {
               <p className="caution">
                 <strong>주의</strong> {tp.caution}
               </p>
+
+              <a
+                className="buy-link"
+                href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(
+                  `${p.category} 영양제`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                네이버쇼핑에서 {p.category} 최저가 검색 ↗
+              </a>
             </article>
           );
         })}

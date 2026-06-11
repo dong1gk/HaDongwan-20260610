@@ -8,24 +8,29 @@ const GREETING = {
   quickReplies: ["요즘 너무 피곤해요", "잠을 잘 못 자요", "눈이 침침해요", "장이 예민해요", "피부가 푸석해요"],
 };
 
+// 추천 프롬프트에 전달할 대화 요약 텍스트
+function buildTranscript(messages) {
+  return messages
+    .map((m) => `${m.role === "user" ? "고객" : "도우미"}: ${m.content}`)
+    .join("\n")
+    .slice(-2000);
+}
+
 export default function ChatIntake({ onComplete, onFallback }) {
   const [messages, setMessages] = useState([GREETING]);
   const [input, setInput] = useState("");
   const [waiting, setWaiting] = useState(false);
+  const [failed, setFailed] = useState(false);
   const scrollRef = useRef(null);
+  const lastSentRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, waiting]);
+  }, [messages, waiting, failed]);
 
-  async function send(text) {
-    const trimmed = text.trim();
-    if (!trimmed || waiting) return;
-
-    const nextMessages = [...messages, { role: "user", content: trimmed }];
-    setMessages(nextMessages);
-    setInput("");
+  async function callApi(nextMessages) {
     setWaiting(true);
+    setFailed(false);
 
     try {
       const data = await sendChatMessage(
@@ -33,25 +38,44 @@ export default function ChatIntake({ onComplete, onFallback }) {
       );
 
       if (!data.aiAvailable) {
+        // AI 자체를 쓸 수 없는 상태 → 재시도 의미 없음, 설문으로 폴백
         onFallback("AI 대화 모드를 사용할 수 없어 간단 설문으로 진행할게요.");
         return;
       }
 
-      setMessages((prev) => [
-        ...prev,
+      const finalMessages = [
+        ...nextMessages,
         { role: "assistant", content: data.reply, quickReplies: data.quickReplies },
-      ]);
+      ];
+      setMessages(finalMessages);
 
       if (data.status === "ready" && data.profile) {
         // 마지막 요약 메시지를 잠깐 보여준 뒤 추천 생성으로 이동
-        setTimeout(() => onComplete(data.profile), 1200);
+        setTimeout(() => onComplete(data.profile, buildTranscript(finalMessages)), 1200);
         return;
       }
     } catch (e) {
-      onFallback("연결이 불안정해 간단 설문으로 진행할게요.");
+      // 일시적 네트워크 오류일 수 있으므로 바로 포기하지 않고 재시도 버튼 제공
+      setFailed(true);
+      setWaiting(false);
       return;
     }
     setWaiting(false);
+  }
+
+  function send(text) {
+    const trimmed = text.trim();
+    if (!trimmed || waiting) return;
+
+    const nextMessages = [...messages, { role: "user", content: trimmed }];
+    setMessages(nextMessages);
+    setInput("");
+    lastSentRef.current = nextMessages;
+    callApi(nextMessages);
+  }
+
+  function retry() {
+    if (lastSentRef.current) callApi(lastSentRef.current);
   }
 
   function handleSubmit(e) {
@@ -82,6 +106,23 @@ export default function ChatIntake({ onComplete, onFallback }) {
               <span className="chat-avatar">💊</span>
               <div className="bubble assistant typing">
                 <span /><span /><span />
+              </div>
+            </div>
+          )}
+          {failed && (
+            <div className="chat-error">
+              <p>잠시 연결이 불안정했어요. 다시 시도해볼까요?</p>
+              <div className="chat-error-actions">
+                <button type="button" className="chip chip-retry" onClick={retry}>
+                  다시 시도
+                </button>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => onFallback("간단 설문으로 진행할게요.")}
+                >
+                  간단 설문으로 진행
+                </button>
               </div>
             </div>
           )}

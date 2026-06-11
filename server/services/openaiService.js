@@ -33,7 +33,7 @@ const SYSTEM_PROMPT = `당신은 "영양제핏"이라는 한국 커머스 서비
 }
 topProducts는 정확히 3개(후보가 3개 미만이면 후보 수만큼)를 rank 순서로 포함하세요.`;
 
-function buildUserMessage(profile, scoring, crawledData) {
+function buildUserMessage(profile, scoring, crawledData, chatTranscript) {
   const { routine, recommendedIngredients, candidates } = scoring;
 
   const candidateLines = candidates.map((c) => {
@@ -73,6 +73,15 @@ function buildUserMessage(profile, scoring, crawledData) {
     "## 크롤링 참고 자료 (공개 위키백과 성분 정보)",
     ...(snippetLines.length ? snippetLines : ["(참고 자료 없음)"]),
     "",
+    ...(chatTranscript
+      ? [
+          "## 상담 대화 내용 (중요)",
+          String(chatTranscript).slice(0, 2000),
+          "",
+          "중요: summary 또는 1순위 제품의 recommendationReason에서 고객이 대화에서 말한 구체적인 상황을 반드시 한 번 직접 언급하며 시작하세요. (예: 고객이 \"잠드는 데 한 시간 넘게 걸려요\"라고 했다면 → \"잠드는 데 시간이 오래 걸린다고 하셨는데, ...\") 일반적인 설명만 쓰지 마세요.",
+          "",
+        ]
+      : []),
     "위 정보를 바탕으로 Top 3 제품을 선정하고 JSON 형식으로 추천 결과를 작성하세요.",
   ].join("\n");
 }
@@ -87,7 +96,7 @@ function validateAiResult(result, candidates) {
   return result.topProducts.every((tp) => candidateIds.has(tp.productId));
 }
 
-async function generateRecommendation(profile, scoring, crawledData) {
+async function generateRecommendation(profile, scoring, crawledData, chatTranscript = null) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return { ok: false, reason: "OPENAI_API_KEY 미설정" };
@@ -103,7 +112,7 @@ async function generateRecommendation(profile, scoring, crawledData) {
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: buildUserMessage(profile, scoring, crawledData) },
+        { role: "user", content: buildUserMessage(profile, scoring, crawledData, chatTranscript) },
       ],
     });
 
@@ -143,6 +152,8 @@ const INTAKE_SYSTEM_PROMPT = `당신은 "영양제핏"의 AI 영양제 구매 �
 - 한 번에 한 가지만 물어보세요. 답변은 1~2문장으로 짧고 친근하게. 공감은 한 마디면 충분하고 과장하지 마세요.
 - quickReplies에는 사용자가 탭해서 바로 답할 수 있는 선택지 2~5개를 담으세요. 자유 입력이 더 자연스러운 질문(예: 복용 중인 영양제)이면 빈 배열 [].
 - 5가지 정보가 모두 모이면 status를 "ready"로 바꾸고, reply에는 수집한 내용을 한 문장으로 요약하며 추천을 시작한다고 알려주세요.
+- 추천을 시작한다고 말할 때는 반드시 같은 응답에서 status를 "ready"로 하고 profile의 5개 필드를 모두 채워야 합니다. profile 없이 추천 시작을 약속하지 마세요.
+- status가 "collecting"이면 reply는 반드시 질문으로 끝나야 합니다.
 
 반드시 아래 JSON 형식으로만 응답하세요:
 {
@@ -172,6 +183,16 @@ function coerceProfile(profile) {
   };
 }
 
+async function callIntakeModel(client, model, chatMessages) {
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.5,
+    response_format: { type: "json_object" },
+    messages: [{ role: "system", content: INTAKE_SYSTEM_PROMPT }, ...chatMessages],
+  });
+  return JSON.parse(completion.choices?.[0]?.message?.content);
+}
+
 async function chatIntake(messages) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, reason: "OPENAI_API_KEY 미설정" };
@@ -179,24 +200,40 @@ async function chatIntake(messages) {
   const client = new OpenAI({ apiKey });
   const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
-  try {
-    const completion = await client.chat.completions.create({
-      model,
-      temperature: 0.5,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: INTAKE_SYSTEM_PROMPT },
-        ...messages.map((m) => ({
-          role: m.role === "assistant" ? "assistant" : "user",
-          content: String(m.content || "").slice(0, 1000),
-        })),
-      ],
-    });
+  const chatMessages = messages.map((m) => ({
+    role: m.role === "assistant" ? "assistant" : "user",
+    content: String(m.content || "").slice(0, 1000),
+  }));
 
-    const parsed = JSON.parse(completion.choices?.[0]?.message?.content);
+  try {
+    let parsed = await callIntakeModel(client, model, chatMessages);
     if (typeof parsed.reply !== "string") return { ok: false, reason: "응답 형식 오류" };
 
-    const profile = parsed.status === "ready" ? coerceProfile(parsed.profile) : null;
+    let profile = parsed.status === "ready" ? coerceProfile(parsed.profile) : null;
+
+    // 모델이 "추천을 시작한다"고 했지만 profile이 비어 있으면 대화가 멈추므로,
+    // 한 번 더 호출해 profile 완성을 강제한다
+    if (parsed.status === "ready" && !profile) {
+      const retried = await callIntakeModel(client, model, [
+        ...chatMessages,
+        { role: "assistant", content: parsed.reply },
+        {
+          role: "user",
+          content:
+            "(시스템 메시지) 지금까지의 대화에서 수집한 정보로 profile의 5개 필드를 모두 채워 status \"ready\"로 다시 응답하세요. 부족한 정보가 있다면 status \"collecting\"으로 그 정보만 질문하세요.",
+        },
+      ]);
+      if (typeof retried.reply === "string") {
+        const retriedProfile = coerceProfile(retried.profile);
+        if (retriedProfile) {
+          parsed = retried;
+          profile = retriedProfile;
+        } else if (retried.status === "collecting") {
+          parsed = retried;
+        }
+      }
+    }
+
     return {
       ok: true,
       data: {

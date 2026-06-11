@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Landing from "./components/Landing.jsx";
 import ChatIntake from "./components/ChatIntake.jsx";
 import Questionnaire from "./components/Questionnaire.jsx";
@@ -9,18 +9,23 @@ import ProductComparison from "./components/ProductComparison.jsx";
 import TrustEvidence from "./components/TrustEvidence.jsx";
 import FinalPurchaseCard from "./components/FinalPurchaseCard.jsx";
 import Disclaimer from "./components/Disclaimer.jsx";
-import { fetchRecommendation } from "./api.js";
+import { fetchRecommendation, pingHealth } from "./api.js";
 
 export default function App() {
   const [step, setStep] = useState("landing"); // landing | chat | survey | loading | results
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
-  async function handleSubmit(answers) {
+  // 랜딩 진입 시 서버를 미리 깨워 콜드 스타트 지연을 줄인다 (Render 무료 플랜)
+  useEffect(() => {
+    pingHealth();
+  }, []);
+
+  async function handleSubmit(answers, chatTranscript = null) {
     setStep("loading");
     setError(null);
     try {
-      const data = await fetchRecommendation(answers);
+      const data = await fetchRecommendation(answers, chatTranscript);
       if (data.noResult) {
         setError(data.message);
         setStep("survey");

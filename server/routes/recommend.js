@@ -18,7 +18,7 @@ const CONCERN_OPTIONS = new Set([
 
 // POST /api/recommend — 규칙 기반 후보 압축 + AI 추천 설명 생성
 router.post("/", async (req, res) => {
-  const { concern, ageRange, currentSupplements = "", budget, preference } = req.body || {};
+  const { concern, ageRange, currentSupplements = "", budget, preference, chatTranscript } = req.body || {};
 
   if (!concern || !budget || !preference) {
     return res.status(400).json({ error: "concern, budget, preference는 필수 항목입니다." });
@@ -50,7 +50,8 @@ router.post("/", async (req, res) => {
     const crawledData = readCache();
 
     // 3) AI 추천 설명 생성, 실패 시 규칙 기반 폴백
-    const ai = await generateRecommendation(profile, scoring, crawledData);
+    // 대화로 들어온 경우 상담 내용을 함께 전달해 더 개인화된 설명 생성
+    const ai = await generateRecommendation(profile, scoring, crawledData, chatTranscript);
     const aiGenerated = ai.ok;
     const core = ai.ok ? ai.result : buildFallbackResult(profile, scoring);
 
