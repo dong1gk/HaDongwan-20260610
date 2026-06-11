@@ -57,16 +57,11 @@ export default function RecommendationResults({ topProducts }) {
                 <strong>주의</strong> {tp.caution}
               </p>
 
-              <a
-                className="buy-link"
-                href={`https://search.shopping.naver.com/search/all?query=${encodeURIComponent(
-                  `${p.category} 영양제`
-                )}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                네이버쇼핑에서 {p.category} 최저가 검색 ↗
-              </a>
+              {p.productUrl && (
+                <a className="buy-link" href={p.productUrl} target="_blank" rel="noreferrer">
+                  올웨이즈에서 보기 ↗
+                </a>
+              )}
             </article>
           );
         })}
