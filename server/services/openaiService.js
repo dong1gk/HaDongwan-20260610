@@ -124,4 +124,93 @@ async function generateRecommendation(profile, scoring, crawledData) {
   }
 }
 
-module.exports = { generateRecommendation };
+// ─────────────────────────────────────────────
+// 대화형 인테이크: 자연어 대화로 추천에 필요한 5가지 정보 수집
+// ─────────────────────────────────────────────
+
+const INTAKE_SYSTEM_PROMPT = `당신은 "영양제핏"의 AI 영양제 구매 상담 도우미입니다. 자연스러운 한국어 대화로 영양제 추천에 필요한 정보를 수집합니다.
+
+수집할 정보 5가지:
+1. concern: 건강 고민. "피로", "수면", "눈 건강", "장 건강", "피부", "혈당", "관절", "다이어트", "면역" 중 사용자의 말과 가장 가까운 것 하나. 어디에도 해당하지 않으면 사용자의 표현을 짧게 정리한 값.
+2. ageRange: "35-39", "40-44", "45-50" 중 하나. 범위 밖이라면 가장 가까운 것.
+3. currentSupplements: 현재 복용 중인 영양제 (자유 텍스트). 없다고 하면 빈 문자열 "".
+4. budget: "2만원 이하", "2-4만원", "4-6만원", "상관없음" 중 하나.
+5. preference: "가성비", "리뷰 신뢰도", "성분 함량", "복용 편의성", "기존 영양제와 안 겹치는 것" 중 하나.
+
+대화 원칙:
+- 당신은 의료 진단을 하지 않습니다. 치료/완치/질병 개선 같은 표현 금지. 증상이 심각해 보이면 전문가 상담을 짧게 권하되 대화는 계속 진행하세요.
+- 사용자의 메시지에서 이미 알 수 있는 정보는 절대 다시 묻지 마세요. (예: "너무 피곤하고 잠도 못 자요" → 고민은 파악됨. 피로와 수면 중 어느 쪽이 더 신경 쓰이는지만 확인)
+- 한 번에 한 가지만 물어보세요. 답변은 1~2문장으로 짧고 친근하게. 공감은 한 마디면 충분하고 과장하지 마세요.
+- quickReplies에는 사용자가 탭해서 바로 답할 수 있는 선택지 2~5개를 담으세요. 자유 입력이 더 자연스러운 질문(예: 복용 중인 영양제)이면 빈 배열 [].
+- 5가지 정보가 모두 모이면 status를 "ready"로 바꾸고, reply에는 수집한 내용을 한 문장으로 요약하며 추천을 시작한다고 알려주세요.
+
+반드시 아래 JSON 형식으로만 응답하세요:
+{
+  "reply": "사용자에게 보낼 메시지 (한국어, 1~2문장)",
+  "quickReplies": ["선택지1", "선택지2"],
+  "status": "collecting" 또는 "ready",
+  "profile": null 또는 {"concern":"...","ageRange":"...","currentSupplements":"...","budget":"...","preference":"..."}
+}`;
+
+const BUDGET_OPTIONS = ["2만원 이하", "2-4만원", "4-6만원", "상관없음"];
+const PREFERENCE_OPTIONS = ["가성비", "리뷰 신뢰도", "성분 함량", "복용 편의성", "기존 영양제와 안 겹치는 것"];
+const AGE_OPTIONS = ["35-39", "40-44", "45-50"];
+
+// AI가 만든 profile을 추천 엔진이 아는 값으로 보정
+function coerceProfile(profile) {
+  if (!profile || typeof profile !== "object") return null;
+  const pick = (value, options, fallback) =>
+    options.find((o) => String(value || "").includes(o) || o.includes(String(value || ""))) || fallback;
+  const concern = String(profile.concern || "").trim();
+  if (!concern) return null;
+  return {
+    concern,
+    ageRange: pick(profile.ageRange, AGE_OPTIONS, "미입력"),
+    currentSupplements: String(profile.currentSupplements || ""),
+    budget: pick(profile.budget, BUDGET_OPTIONS, "상관없음"),
+    preference: pick(profile.preference, PREFERENCE_OPTIONS, "가성비"),
+  };
+}
+
+async function chatIntake(messages) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return { ok: false, reason: "OPENAI_API_KEY 미설정" };
+
+  const client = new OpenAI({ apiKey });
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
+
+  try {
+    const completion = await client.chat.completions.create({
+      model,
+      temperature: 0.5,
+      response_format: { type: "json_object" },
+      messages: [
+        { role: "system", content: INTAKE_SYSTEM_PROMPT },
+        ...messages.map((m) => ({
+          role: m.role === "assistant" ? "assistant" : "user",
+          content: String(m.content || "").slice(0, 1000),
+        })),
+      ],
+    });
+
+    const parsed = JSON.parse(completion.choices?.[0]?.message?.content);
+    if (typeof parsed.reply !== "string") return { ok: false, reason: "응답 형식 오류" };
+
+    const profile = parsed.status === "ready" ? coerceProfile(parsed.profile) : null;
+    return {
+      ok: true,
+      data: {
+        reply: parsed.reply,
+        quickReplies: Array.isArray(parsed.quickReplies) ? parsed.quickReplies.slice(0, 5) : [],
+        // profile 보정에 실패하면 계속 수집 모드 유지
+        status: profile ? "ready" : "collecting",
+        profile,
+      },
+    };
+  } catch (error) {
+    console.error("대화 인테이크 실패:", error.message);
+    return { ok: false, reason: error.message };
+  }
+}
+
+module.exports = { generateRecommendation, chatIntake };

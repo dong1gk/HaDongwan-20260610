@@ -9,17 +9,17 @@ export default function Landing({ onStart }) {
         <span className="accent">3분 안에 후보 3개</span>로 압축
       </h1>
       <p className="landing-sub">
-        긴 설문 없이 건강 고민과 현재 복용 루틴만 입력하세요.
+        긴 설문 없이, 대화하듯 건강 고민을 이야기하세요.
         <br />
         성분, 함량, 후기, 가격까지 한 번에 비교해드립니다.
       </p>
 
       <ul className="landing-points">
         <li>
-          <span className="point-icon">🎯</span>
+          <span className="point-icon">💬</span>
           <div>
-            <strong>고민 → 성분으로 변환</strong>
-            <p>피로, 수면, 눈 건강 같은 고민을 맞는 성분군으로 바꿔드려요.</p>
+            <strong>대화로 시작하는 추천</strong>
+            <p>"요즘 너무 피곤해요"라고 말하면, 필요한 것만 몇 가지 더 여쭤봐요.</p>
           </div>
         </li>
         <li>

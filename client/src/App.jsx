@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Landing from "./components/Landing.jsx";
+import ChatIntake from "./components/ChatIntake.jsx";
 import Questionnaire from "./components/Questionnaire.jsx";
 import LoadingState from "./components/LoadingState.jsx";
 import RoutineCheck from "./components/RoutineCheck.jsx";
@@ -11,7 +12,7 @@ import Disclaimer from "./components/Disclaimer.jsx";
 import { fetchRecommendation } from "./api.js";
 
 export default function App() {
-  const [step, setStep] = useState("landing"); // landing | form | loading | results
+  const [step, setStep] = useState("landing"); // landing | chat | survey | loading | results
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
 
@@ -22,7 +23,7 @@ export default function App() {
       const data = await fetchRecommendation(answers);
       if (data.noResult) {
         setError(data.message);
-        setStep("form");
+        setStep("survey");
         return;
       }
       setResult(data);
@@ -30,14 +31,21 @@ export default function App() {
       window.scrollTo({ top: 0 });
     } catch (e) {
       setError(e.message || "추천을 불러오지 못했어요. 잠시 후 다시 시도해주세요.");
-      setStep("form");
+      setStep("survey");
     }
+  }
+
+  // 채팅 인테이크 실패 시 설문 폴백
+  function handleChatFallback(message) {
+    setError(message);
+    setStep("survey");
+    window.scrollTo({ top: 0 });
   }
 
   function restart() {
     setResult(null);
     setError(null);
-    setStep("form");
+    setStep("chat");
     window.scrollTo({ top: 0 });
   }
 
@@ -50,9 +58,11 @@ export default function App() {
         <span className="header-tag">AI 영양제 구매 도우미</span>
       </header>
 
-      {step === "landing" && <Landing onStart={() => setStep("form")} />}
+      {step === "landing" && <Landing onStart={() => setStep("chat")} />}
 
-      {step === "form" && (
+      {step === "chat" && <ChatIntake onComplete={handleSubmit} onFallback={handleChatFallback} />}
+
+      {step === "survey" && (
         <>
           {error && <div className="error-banner">{error}</div>}
           <Questionnaire onSubmit={handleSubmit} />

@@ -20,6 +20,13 @@ export function fetchRecommendation(answers) {
   });
 }
 
+export function sendChatMessage(messages) {
+  return request("/api/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages }),
+  });
+}
+
 export function fetchCrawledSample() {
   return request("/api/crawl/sample");
 }

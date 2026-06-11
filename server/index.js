@@ -5,6 +5,7 @@ const cors = require("cors");
 const productsRouter = require("./routes/products");
 const recommendRouter = require("./routes/recommend");
 const crawlRouter = require("./routes/crawl");
+const chatRouter = require("./routes/chat");
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -33,6 +34,7 @@ app.get("/api/health", (req, res) => {
 app.use("/api/products", productsRouter);
 app.use("/api/recommend", recommendRouter);
 app.use("/api/crawl", crawlRouter);
+app.use("/api/chat", chatRouter);
 
 app.listen(PORT, () => {
   console.log(`영양제핏 서버 실행 중: http://localhost:${PORT}`);
