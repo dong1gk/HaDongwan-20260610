@@ -11,9 +11,16 @@ export default function RecommendationResults({ topProducts }) {
           const p = tp.product;
           return (
             <article key={tp.productId} className={`product-card ${i === 0 ? "top-pick" : ""}`}>
+              {i === 0 && <span className="best-ribbon">BEST PICK</span>}
               <div className="product-card-head">
                 <span className="rank">{RANK_LABELS[i] || `${tp.rank}순위`}</span>
                 <span className="confidence">적합도 {Math.round(tp.confidenceScore)}점</span>
+              </div>
+              <div className="confidence-bar" aria-hidden="true">
+                <span
+                  className="confidence-fill"
+                  style={{ width: `${Math.min(100, Math.round(tp.confidenceScore))}%` }}
+                />
               </div>
 
               <h3>{p.productName}</h3>

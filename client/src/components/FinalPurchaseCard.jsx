@@ -5,11 +5,15 @@ export default function FinalPurchaseCard({ result }) {
 
   return (
     <section className="card final-card">
-      <h2>구매 전 최종 확인 카드</h2>
-      <p className="section-sub">
-        1순위 제품 <strong>{p.productName}</strong> 기준으로 정리했어요.
-      </p>
+      <div className="final-head">
+        <p className="final-eyebrow">구매 전 최종 확인 카드</p>
+        <h2>{p.productName}</h2>
+        <p className="final-brand">
+          {p.brand} · 1순위 추천 · 적합도 {Math.round(top.confidenceScore)}점
+        </p>
+      </div>
 
+      <div className="final-grid">
       <div className="final-section">
         <h3>✅ 추천 이유</h3>
         <ul>
@@ -46,6 +50,7 @@ export default function FinalPurchaseCard({ result }) {
         <ul>
           <li>{result.finalAdvice}</li>
         </ul>
+      </div>
       </div>
 
       <p className="final-disclaimer">{result.disclaimer}</p>

@@ -99,19 +99,41 @@ body {
   margin-bottom: 20px;
 }
 
-/* 결과 페이지 섹션 순차 등장 */
+/* 결과 페이지: 스크롤 진입 시 섹션 등장 (IntersectionObserver가 .in-view 부여) */
 .results > * {
-  animation: fadeUp 0.5s ease both;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
 }
 
-.results > *:nth-child(2) { animation-delay: 0.06s; }
-.results > *:nth-child(3) { animation-delay: 0.12s; }
-.results > *:nth-child(4) { animation-delay: 0.18s; }
-.results > *:nth-child(5) { animation-delay: 0.24s; }
-.results > *:nth-child(6) { animation-delay: 0.3s; }
-.results > *:nth-child(7) { animation-delay: 0.36s; }
-.results > *:nth-child(8) { animation-delay: 0.42s; }
-.results > *:nth-child(9) { animation-delay: 0.48s; }
+.results > *.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* 추천 리포트 히어로 */
+.summary-card {
+  background: linear-gradient(160deg, #ecf9f5 0%, #ffffff 65%);
+  border-color: rgba(15, 157, 138, 0.3);
+}
+
+.hero-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--accent-dark);
+  letter-spacing: 0.14em;
+  margin-bottom: 8px;
+}
+
+.summary-card h2 {
+  font-size: 21px;
+  line-height: 1.4;
+}
+
+.hero-summary {
+  margin-top: 10px;
+  font-size: 15px;
+}
 
 .card h2 {
   font-size: 19px;
@@ -565,11 +587,26 @@ legend {
   color: var(--text-sub);
 }
 
-/* 루틴 체크 */
-.routine-grid {
+/* 루틴 체크: 고민 → 성분 변환 플로우 */
+.routine-flow {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.routine-arrow {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.routine-current {
   margin-bottom: 16px;
 }
 
@@ -630,10 +667,48 @@ legend {
 }
 
 .product-card {
+  position: relative;
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.best-ribbon {
+  position: absolute;
+  top: -11px;
+  left: 20px;
+  background: var(--accent-dark);
+  color: #fff;
+  padding: 3px 13px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  box-shadow: 0 3px 8px rgba(11, 124, 109, 0.3);
+}
+
+.confidence-bar {
+  height: 6px;
+  background: #edf2f1;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 2px 0 14px;
+}
+
+.confidence-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), #58c7b3);
+  transform-origin: left;
+  animation: barGrow 0.9s 0.25s ease both;
+}
+
+@keyframes barGrow {
+  from {
+    transform: scaleX(0);
+  }
 }
 
 .product-card:hover {
@@ -789,6 +864,18 @@ legend {
   white-space: nowrap;
 }
 
+.compare-table tbody tr {
+  transition: background 0.15s;
+}
+
+.compare-table tbody tr:nth-child(even) {
+  background: #f7fbfa;
+}
+
+.compare-table tbody tr:hover {
+  background: var(--accent-light);
+}
+
 .cell-name {
   font-weight: 700;
   white-space: nowrap;
@@ -832,8 +919,21 @@ legend {
 .pros-cons {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 12px;
   margin-bottom: 12px;
+}
+
+.pros-cons > div {
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.pros-cons > div:first-child {
+  background: #edf8f2;
+}
+
+.pros-cons > div:last-child {
+  background: #fdf6ec;
 }
 
 .pros-cons h4 {
@@ -906,7 +1006,42 @@ legend {
 
 /* 최종 카드 */
 .final-card {
-  border: 2px solid var(--accent);
+  border: none;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 8px 28px rgba(15, 157, 138, 0.15);
+}
+
+.final-head {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-dark) 100%);
+  color: #fff;
+  padding: 24px;
+}
+
+.final-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0.85;
+  margin-bottom: 7px;
+}
+
+.final-head h2 {
+  color: #fff;
+  font-size: 22px;
+  margin-bottom: 3px;
+}
+
+.final-brand {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.final-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 22px;
+  padding: 8px 24px 4px;
 }
 
 .final-section {
@@ -935,7 +1070,7 @@ legend {
 }
 
 .final-disclaimer {
-  margin-top: 20px;
+  margin: 18px 24px 24px;
   padding: 12px 16px;
   background: var(--accent-light);
   border-radius: 10px;
@@ -954,6 +1089,10 @@ legend {
   }
 
   .pros-cons {
+    grid-template-columns: 1fr;
+  }
+
+  .final-grid {
     grid-template-columns: 1fr;
   }
 }

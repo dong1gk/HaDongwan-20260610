@@ -21,6 +21,25 @@ export default function App() {
     pingHealth();
   }, []);
 
+  // 결과 페이지: 스크롤에 따라 섹션이 순차적으로 나타나는 효과
+  useEffect(() => {
+    if (step !== "results") return;
+    const sections = document.querySelectorAll(".results > *");
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in-view");
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+    sections.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [step, result]);
+
   async function handleSubmit(answers, chatTranscript = null) {
     setStep("loading");
     setError(null);
@@ -84,8 +103,11 @@ export default function App() {
           )}
 
           <section className="card summary-card">
-            <h2>추천 요약</h2>
-            <p>{result.summary}</p>
+            <p className="hero-eyebrow">AI 추천 리포트</p>
+            <h2>
+              '{result.profile.concern}' 고민을 위한 Top {result.topProducts.length} 추천
+            </h2>
+            <p className="hero-summary">{result.summary}</p>
           </section>
 
           <RoutineCheck
