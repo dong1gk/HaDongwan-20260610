@@ -20,12 +20,39 @@
   padding: 0;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", -apple-system, sans-serif;
-  background: var(--bg);
+  background: linear-gradient(180deg, #e9f6f2 0%, var(--bg) 360px);
   color: var(--text);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+}
+
+/* 모션 */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .app {
@@ -72,6 +99,20 @@ body {
   margin-bottom: 20px;
 }
 
+/* 결과 페이지 섹션 순차 등장 */
+.results > * {
+  animation: fadeUp 0.5s ease both;
+}
+
+.results > *:nth-child(2) { animation-delay: 0.06s; }
+.results > *:nth-child(3) { animation-delay: 0.12s; }
+.results > *:nth-child(4) { animation-delay: 0.18s; }
+.results > *:nth-child(5) { animation-delay: 0.24s; }
+.results > *:nth-child(6) { animation-delay: 0.3s; }
+.results > *:nth-child(7) { animation-delay: 0.36s; }
+.results > *:nth-child(8) { animation-delay: 0.42s; }
+.results > *:nth-child(9) { animation-delay: 0.48s; }
+
 .card h2 {
   font-size: 19px;
   margin-bottom: 6px;
@@ -94,11 +135,18 @@ body {
   border: none;
   border-radius: 12px;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: var(--accent-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 157, 138, 0.25);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
 }
 
 .btn-primary:disabled {
@@ -155,6 +203,34 @@ body {
 .landing {
   padding-top: 28px;
   text-align: center;
+}
+
+.landing > * {
+  animation: fadeUp 0.55s ease both;
+}
+
+.landing > *:nth-child(2) {
+  animation-delay: 0.08s;
+}
+
+.landing > *:nth-child(3) {
+  animation-delay: 0.16s;
+}
+
+.landing > *:nth-child(4) {
+  animation-delay: 0.3s;
+}
+
+.landing > *:nth-child(5) {
+  animation-delay: 0.4s;
+}
+
+.landing-points li:nth-child(2) {
+  animation: fadeUp 0.55s ease 0.24s both;
+}
+
+.landing-points li:nth-child(3) {
+  animation: fadeUp 0.55s ease 0.32s both;
 }
 
 .landing-title {
@@ -241,11 +317,17 @@ legend {
   font-size: 14.5px;
   color: var(--text);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all 0.15s;
 }
 
 .chip:hover {
   border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(15, 157, 138, 0.12);
+}
+
+.chip:active {
+  transform: scale(0.96);
 }
 
 .chip.selected {
@@ -307,6 +389,7 @@ legend {
   display: flex;
   align-items: flex-end;
   gap: 8px;
+  animation: fadeUp 0.3s ease both;
 }
 
 .bubble-row.user {
@@ -376,6 +459,15 @@ legend {
   gap: 8px;
   padding: 0 20px 14px;
 }
+
+.quick-replies .chip {
+  animation: popIn 0.25s ease both;
+}
+
+.quick-replies .chip:nth-child(2) { animation-delay: 0.06s; }
+.quick-replies .chip:nth-child(3) { animation-delay: 0.12s; }
+.quick-replies .chip:nth-child(4) { animation-delay: 0.18s; }
+.quick-replies .chip:nth-child(5) { animation-delay: 0.24s; }
 
 .chat-input-row {
   display: flex;
@@ -541,6 +633,12 @@ legend {
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.product-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 26px rgba(15, 157, 138, 0.14);
 }
 
 .product-card.top-pick {
@@ -654,11 +752,14 @@ legend {
   font-weight: 700;
   border-radius: 10px;
   text-decoration: none;
+  transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .buy-link:hover {
   background: var(--accent);
   color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(15, 157, 138, 0.25);
 }
 
 /* 비교 테이블 */
@@ -854,5 +955,20 @@ legend {
 
   .pros-cons {
     grid-template-columns: 1fr;
+  }
+}
+
+/* 모션 민감 사용자 배려 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 }
